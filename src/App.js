@@ -57,6 +57,12 @@ function WidgetSourceAndPrompt({
   resetUpload,
   error,
   style,
+  hasShadow,
+  hasReflection,
+  keepPose,
+  onShadowChange,
+  onReflectionChange,
+  onKeepPoseChange,
 }) {
   return (
     <div
@@ -132,6 +138,104 @@ function WidgetSourceAndPrompt({
 
       <div className="section">
         <h3>Ürün Açıklaması (İsteğe Bağlı)</h3>
+
+        <div
+          className="options-container"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px",
+            marginBottom: "12px",
+            backgroundColor: "#fff",
+            padding: "10px",
+            borderRadius: "6px",
+            border: "1px solid #eaeaea",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              marginBottom: "8px",
+              fontSize: "14px",
+              color: "#666",
+            }}
+          >
+            <strong>Rötuş seçenekleri:</strong>
+          </div>
+
+          <label
+            className="option-checkbox"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              padding: "5px 10px",
+              backgroundColor: hasShadow ? "#f0f7ff" : "transparent",
+              borderRadius: "4px",
+              border: `1px solid ${hasShadow ? "#ADD8E6" : "#eaeaea"}`,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={hasShadow}
+              onChange={onShadowChange}
+              style={{ marginRight: "6px" }}
+            />
+            <span style={{ fontWeight: hasShadow ? "500" : "normal" }}>
+              Gölge
+            </span>
+          </label>
+
+          <label
+            className="option-checkbox"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              padding: "5px 10px",
+              backgroundColor: hasReflection ? "#f0f7ff" : "transparent",
+              borderRadius: "4px",
+              border: `1px solid ${hasReflection ? "#ADD8E6" : "#eaeaea"}`,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={hasReflection}
+              onChange={onReflectionChange}
+              style={{ marginRight: "6px" }}
+            />
+            <span style={{ fontWeight: hasReflection ? "500" : "normal" }}>
+              Yansıma
+            </span>
+          </label>
+
+          <label
+            className="option-checkbox"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              padding: "5px 10px",
+              backgroundColor: keepPose ? "#f0f7ff" : "transparent",
+              borderRadius: "4px",
+              border: `1px solid ${keepPose ? "#ADD8E6" : "#eaeaea"}`,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={keepPose}
+              onChange={onKeepPoseChange}
+              style={{ marginRight: "6px" }}
+            />
+            <span style={{ fontWeight: keepPose ? "500" : "normal" }}>
+              Pozu Koru
+            </span>
+          </label>
+        </div>
+
         <div>
           <textarea
             value={prompt}
@@ -277,11 +381,10 @@ function WidgetResults({
     style.textContent = `
       .result-image-container {
         transition: all 0.3s ease;
-        position: relative;
       }
       
       .result-image-container:hover {
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 0 10px rgba(138, 43, 226, 0.4); /* Mor gölge */
       }
       
       @keyframes spin {
@@ -297,46 +400,56 @@ function WidgetResults({
         top: 10px;
         right: 10px;
         z-index: 10;
-        opacity: 0;
-        transform: translateX(10px);
-        transition: all 0.3s ease;
-      }
-      
-      .result-image-container:hover .result-actions {
-        opacity: 1;
-        transform: translateX(0);
       }
       
       .action-icon {
-        background-color: rgba(255, 255, 255, 0.85);
+        background-color: rgba(255, 255, 255, 0.7);
         border: none;
-        border-radius: 8px;
-        padding: 8px;
-        margin-bottom: 6px;
+        border-radius: 4px;
+        padding: 6px;
+        margin-bottom: 4px;
         cursor: pointer;
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
       }
       
       .action-icon:hover {
         background-color: white;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        transform: translateY(-2px);
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+      }
+
+      .action-icon:hover .tooltip {
+        opacity: 1;
       }
       
-      .action-icon.primary {
-        display: flex;
+      /* Checkbox options styling */
+      .option-checkbox {
+        position: relative;
+        overflow: hidden;
       }
       
-      .action-icon.secondary {
-        display: none;
+      .option-checkbox input[type="checkbox"] {
+        cursor: pointer;
       }
       
-      .result-image-container:hover .action-icon.secondary {
-        display: flex;
+      .option-checkbox:hover {
+        background-color: #f9f9f9;
+      }
+      
+      .option-checkbox input[type="checkbox"]:checked + span {
+        color: #0066cc;
+      }
+      
+      @keyframes checkboxPulse {
+        0% { box-shadow: 0 0 0 0 rgba(173, 216, 230, 0.7); }
+        70% { box-shadow: 0 0 0 6px rgba(173, 216, 230, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(173, 216, 230, 0); }
+      }
+      
+      .option-checkbox input[type="checkbox"]:checked {
+        animation: checkboxPulse 0.5s;
       }
     `;
     document.head.appendChild(style);
@@ -2285,6 +2398,11 @@ function App() {
   const [error, setError] = useState(null);
   const [debugResponse, setDebugResponse] = useState(null); // Debug için API yanıtını sakla
 
+  // Checkbox options for image processing
+  const [hasShadow, setHasShadow] = useState(true);
+  const [hasReflection, setHasReflection] = useState(true);
+  const [keepPose, setKeepPose] = useState(false);
+
   // Netleştirilmiş görüntüler için state ekleyelim
   const [enhancedImages, setEnhancedImages] = useState(null);
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -2350,6 +2468,34 @@ function App() {
       .action-icon:hover .tooltip {
         opacity: 1;
       }
+      
+      /* Checkbox options styling */
+      .option-checkbox {
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .option-checkbox input[type="checkbox"] {
+        cursor: pointer;
+      }
+      
+      .option-checkbox:hover {
+        background-color: #f9f9f9;
+      }
+      
+      .option-checkbox input[type="checkbox"]:checked + span {
+        color: #0066cc;
+      }
+      
+      @keyframes checkboxPulse {
+        0% { box-shadow: 0 0 0 0 rgba(173, 216, 230, 0.7); }
+        70% { box-shadow: 0 0 0 6px rgba(173, 216, 230, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(173, 216, 230, 0); }
+      }
+      
+      .option-checkbox input[type="checkbox"]:checked {
+        animation: checkboxPulse 0.5s;
+      }
     `;
     document.head.appendChild(style);
 
@@ -2393,6 +2539,19 @@ function App() {
     if (e.target.value.trim()) {
       setError(null);
     }
+  };
+
+  // Handlers for image processing option checkboxes
+  const handleShadowChange = (e) => {
+    setHasShadow(e.target.checked);
+  };
+
+  const handleReflectionChange = (e) => {
+    setHasReflection(e.target.checked);
+  };
+
+  const handleKeepPoseChange = (e) => {
+    setKeepPose(e.target.checked);
   };
 
   const handleCropComplete = (croppedFile) => {
@@ -2452,19 +2611,43 @@ function App() {
           "KB"
         );
 
+        // Add checkbox options to the prompt
+        const basePrompt = prompt.trim();
+        const optionsText = [
+          hasShadow ? "gölgeli" : "",
+          hasReflection ? "yansımalı" : "",
+          keepPose ? "pozu korunmuş" : "",
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+        const enhancedPrompt = basePrompt
+          ? optionsText
+            ? `${basePrompt} - ${optionsText}`
+            : basePrompt
+          : optionsText
+          ? optionsText
+          : "";
+
         // 4 farklı rötuşlama varyasyonu için açıklamalar
         const promptVariations = [
-          prompt.trim() ||
+          enhancedPrompt ||
             "Profesyonel ürün fotoğrafı, beyaz arka plan, doğal yumuşak gölgeler",
-          prompt.trim()
-            ? `${prompt.trim()} - Altın/metal vurgusu ile parlaklık artırılmış`
-            : "Altın/metal vurgusu, parlaklık artırılmış profesyonel ürün fotoğrafı",
-          prompt.trim()
-            ? `${prompt.trim()} - Dramatik kontrastlı çekim`
-            : "Dramatik kontrastlı profesyonel ürün fotoğrafı, derinlikli gölgeler",
-          prompt.trim()
-            ? `${prompt.trim()} - Maksimum parlaklık ve detay`
-            : "Maksimum parlaklık ve detay ile profesyonel ürün fotoğrafı",
+          enhancedPrompt
+            ? `${enhancedPrompt} - Altın/metal vurgusu ile parlaklık artırılmış`
+            : `Altın/metal vurgusu, parlaklık artırılmış profesyonel ürün fotoğrafı${
+                optionsText ? `, ${optionsText}` : ""
+              }`,
+          enhancedPrompt
+            ? `${enhancedPrompt} - Dramatik kontrastlı çekim`
+            : `Dramatik kontrastlı profesyonel ürün fotoğrafı, derinlikli gölgeler${
+                optionsText ? `, ${optionsText}` : ""
+              }`,
+          enhancedPrompt
+            ? `${enhancedPrompt} - Maksimum parlaklık ve detay`
+            : `Maksimum parlaklık ve detay ile profesyonel ürün fotoğrafı${
+                optionsText ? `, ${optionsText}` : ""
+              }`,
         ];
 
         // API endpoint
@@ -2494,6 +2677,9 @@ function App() {
             formData.append("image", file);
             formData.append("prompt", promptText);
             formData.append("userDescription", prompt);
+            formData.append("hasShadow", String(hasShadow));
+            formData.append("hasReflection", String(hasReflection));
+            formData.append("keepPose", String(keepPose));
 
             console.log(`Varyasyon ${index + 1} gönderiliyor:`, promptText);
 
@@ -3170,6 +3356,12 @@ function App() {
           resetUpload={resetUpload}
           error={error}
           style={{ flex: "0 0 260px" }}
+          hasShadow={hasShadow}
+          hasReflection={hasReflection}
+          keepPose={keepPose}
+          onShadowChange={handleShadowChange}
+          onReflectionChange={handleReflectionChange}
+          onKeepPoseChange={handleKeepPoseChange}
         />
 
         <WidgetResults
