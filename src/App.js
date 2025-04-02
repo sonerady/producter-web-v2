@@ -2469,7 +2469,7 @@ function App() {
 
         // API endpoint
         const apiBaseUrl =
-          process.env.REACT_APP_API_URL || "http://localhost:3001";
+          process.env.REACT_APP_API_URL || "https://dires-server.onrender.com";
         const apiUrl = `${apiBaseUrl}/api/gemini-process`;
 
         console.log("Gemini API isteği gönderiliyor:", apiUrl);
