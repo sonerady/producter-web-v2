@@ -3272,7 +3272,7 @@ function App() {
 
       // API endpoint - Backend'imize istek gönderelim
       const apiBaseUrl =
-        process.env.REACT_APP_API_URL || "http://localhost:3001";
+        process.env.REACT_APP_API_URL || "https://dires-server.onrender.com";
       const apiUrl = `${apiBaseUrl}/api/remove-background`;
 
       // Backend API'ye istek gönder
