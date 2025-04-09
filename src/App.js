@@ -2309,43 +2309,70 @@ function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
 }
 
 // Açıklama düzenleme modalı
-function EditPromptModal({ isOpen, onClose, onApply, initialPrompt }) {
+function EditPromptModal({
+  isOpen,
+  onClose,
+  onApply,
+  initialPrompt,
+  imageUrl,
+}) {
   const [editPrompt, setEditPrompt] = useState(initialPrompt);
 
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
-      <div className="edit-modal">
-        <div className="modal-header">
-          <h3>Rötuş Açıklamasını Düzenle</h3>
-          <button onClick={onClose} className="close-button">
-            <RiCloseLine />
-          </button>
-        </div>
+      <div className="edit-modal edit-modal-with-image">
+        <div className="modal-content-flex">
+          {/* Left side - Image preview */}
+          <div className="edit-image-preview">
+            <div className="edit-image-wrapper">
+              <img
+                src={imageUrl}
+                alt="Düzenlenecek görsel"
+                className="edit-preview-image"
+                onError={(e) => {
+                  e.target.src =
+                    "https://via.placeholder.com/300x300?text=Görsel+Yüklenemedi";
+                }}
+              />
+              <div className="edit-image-label">Seçilen Görsel</div>
+            </div>
+          </div>
 
-        <div className="modal-content">
-          <textarea
-            value={editPrompt}
-            onChange={(e) => setEditPrompt(e.target.value)}
-            className="edit-textarea"
-            placeholder="Rötuş açıklamasını düzenleyin..."
-          />
+          {/* Right side - Form */}
+          <div className="edit-form-container">
+            <div className="edit-form-inner">
+              <div className="edit-form-content">
+                <h3 className="edit-form-title">Görsel Açıklaması</h3>
+                <textarea
+                  value={editPrompt}
+                  onChange={(e) => setEditPrompt(e.target.value)}
+                  className="edit-textarea"
+                  placeholder="Görsel için detaylı bir açıklama yazın..."
+                />
+                <div className="edit-help-text">
+                  Detaylı ve açıklayıcı tanımlar daha iyi sonuçlar verir.
+                </div>
+              </div>
 
-          <div className="button-group">
-            <button onClick={onClose} className="cancel-button">
-              İptal
-            </button>
-            <button
-              onClick={() => {
-                onApply(editPrompt);
-                onClose();
-              }}
-              className="apply-button"
-            >
-              <RiCheckLine />
-              Uygula
-            </button>
+              <div className="button-group">
+                <button onClick={onClose} className="cancel-button">
+                  Kapat
+                </button>
+                <button
+                  onClick={() => {
+                    onApply(editPrompt);
+                    onClose();
+                  }}
+                  className="apply-button"
+                  disabled={!editPrompt.trim()}
+                >
+                  <RiCheckLine />
+                  Kaydet
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2894,68 +2921,28 @@ function App() {
     if (!imageUrl) return;
 
     try {
-      // Eğer bu indekste bir işlem zaten devam ediyorsa çıkış yap
-      if (isEnhancing && enhancingIndex === index) return;
-
-      // İşlemin başladığını belirt
+      // İşlem durumunu güncelle
       setIsEnhancing(true);
       setEnhancingIndex(index);
 
-      // URL'i logla
-      console.log(`Netleştirme için kullanılan URL: ${imageUrl}`);
-
-      // Eğer enhancedImages henüz oluşturulmadıysa, 4 boş öğe içeren bir dizi oluştur
-      if (!enhancedImages) {
-        setEnhancedImages(Array(4).fill(null));
-      }
-
-      // Mevcut netleştirilmiş görüntüleri koru, sadece işlenen indeksi güncelle
-      const updatedEnhancedImages = enhancedImages
-        ? [...enhancedImages]
-        : Array(4).fill(null);
-
-      // Sadece işlenen indeksi güncelle, diğer görüntülere dokunma
-      updatedEnhancedImages[index] = {
-        id: index,
-        url: "", // yükleniyor durumunda henüz URL yok
-        loading: true,
-        sourceImageUrl: imageUrl, // kaynak URL'i kaydediyoruz
-      };
-
-      // State'i güncelleyelim
-      setEnhancedImages(updatedEnhancedImages);
-
-      // Gemini API'den gelen generatedPrompt bilgisini al (eğer varsa)
-      let generatedPrompt = "";
-
-      // Eğer bu görsel için debugResponse varsa ve generatedPrompt içeriyorsa
-      if (
-        debugResponse &&
-        debugResponse[index] &&
-        debugResponse[index].generatedPrompt
-      ) {
-        generatedPrompt = debugResponse[index].generatedPrompt;
-        console.log(
-          `Gemini generatedPrompt kullanılıyor (${index}):`,
-          generatedPrompt
-        );
-      }
-      // Değilse, bir varsayılan prompt kullan
-      else {
-        generatedPrompt =
-          "Enhance this product image with higher clarity and details.";
-        console.log(
-          `Varsayılan netleştirme prompt'u kullanılıyor (${index}):`,
-          generatedPrompt
-        );
-      }
+      // EnhancedImages state'ini başlat veya güncelle
+      setEnhancedImages((prev) => {
+        const newImages = prev || Array(4).fill(null);
+        newImages[index] = {
+          id: index,
+          url: "",
+          loading: true,
+          sourceImageUrl: imageUrl,
+        };
+        return newImages;
+      });
 
       // API endpoint
       const apiBaseUrl =
         process.env.REACT_APP_API_URL || "http://localhost:3001";
       const apiUrl = `${apiBaseUrl}/api/image-clarity`;
 
-      // API isteği gönder
+      // API isteği
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -2963,82 +2950,50 @@ function App() {
         },
         body: JSON.stringify({
           imageUrl: imageUrl,
-          mode: "flux", // varsayılan mod
-          creativity: 4, // Yaratıcılık seviyesi 4 olarak ayarlandı
-          prompt: generatedPrompt, // Gemini'den gelen generatedPrompt - userDescription kaldırıldı
+          mode: "flux",
+          creativity: 4,
+          prompt: "Enhance this product image with higher clarity and details.",
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`API yanıtı başarısız: ${response.status}`);
+        throw new Error(`API error: ${response.status}`);
       }
 
-      // JSON yanıtını parse et
       const responseData = await response.json();
-      console.log("Netleştirme API yanıtı:", responseData);
 
-      // Yanıt başarılıysa, netleştirilmiş görüntü URL'sini al
-      if (
-        responseData.success &&
-        (responseData.upscaledImageUrl ||
-          responseData.result?.upscaled_image_url)
-      ) {
-        const enhancedImageUrl =
-          responseData.upscaledImageUrl ||
-          responseData.result.upscaled_image_url;
-
-        // Mevcut netleştirilmiş görüntüleri koru, sadece işlenen indeksi güncelle
-        // Önce güncel state'i al, doğrudan setEnhancedImages içinde yapmak yerine:
-        setEnhancedImages((currentEnhancedImages) => {
-          const newEnhancedImages = [
-            ...(currentEnhancedImages || Array(4).fill(null)),
-          ];
-          newEnhancedImages[index] = {
+      // Başarılı yanıt kontrolü
+      if (responseData.success && responseData.upscaledImageUrl) {
+        setEnhancedImages((prev) => {
+          const newImages = [...(prev || Array(4).fill(null))];
+          newImages[index] = {
             id: index,
-            url: enhancedImageUrl,
-            loading: false,
-            sourceImageUrl: imageUrl, // Kaynak resim URL'sini koru
-          };
-          return newEnhancedImages;
-        });
-
-        console.log(
-          `Görüntü netleştirildi. İndeks: ${index}, URL: ${enhancedImageUrl}`
-        );
-      } else {
-        throw new Error(
-          "API yanıtında netleştirilmiş görüntü URL'si bulunamadı"
-        );
-      }
-    } catch (error) {
-      console.error("Netleştirme sırasında hata:", error);
-
-      // Hata durumunda sadece ilgili görüntüyü hata durumuna güncelle, diğerlerine dokunma
-      setEnhancedImages((currentEnhancedImages) => {
-        if (!currentEnhancedImages) return Array(4).fill(null);
-
-        const newEnhancedImages = [...currentEnhancedImages];
-
-        if (!newEnhancedImages[index]) {
-          newEnhancedImages[index] = {
-            id: index,
-            error: true,
-            loading: false,
-            sourceImageUrl: imageUrl, // Hata durumunda da kaynak URL'yi koru
-          };
-        } else {
-          newEnhancedImages[index] = {
-            ...newEnhancedImages[index],
-            error: true,
+            url: responseData.upscaledImageUrl,
             loading: false,
             sourceImageUrl: imageUrl,
           };
-        }
+          return newImages;
+        });
+      } else {
+        throw new Error("No enhanced image URL in response");
+      }
+    } catch (error) {
+      console.error("Enhancement error:", error);
 
-        return newEnhancedImages;
+      // Hata durumunda state'i güncelle
+      setEnhancedImages((prev) => {
+        const newImages = [...(prev || Array(4).fill(null))];
+        newImages[index] = {
+          id: index,
+          error: true,
+          loading: false,
+          sourceImageUrl: imageUrl,
+        };
+        return newImages;
       });
 
-      alert(`Görüntü netleştirilemedi: ${error.message}`);
+      // Kullanıcıya hata mesajı göster
+      alert("Görüntü netleştirilemedi. Lütfen daha sonra tekrar deneyin.");
     } finally {
       setIsEnhancing(false);
       setEnhancingIndex(null);
@@ -3413,6 +3368,11 @@ function App() {
         onClose={() => setShowEditPromptModal(false)}
         onApply={handleEditPromptApply}
         initialPrompt={editPromptText}
+        imageUrl={
+          resultImages && resultImages[editPromptIndex]
+            ? resultImages[editPromptIndex].url
+            : ""
+        }
       />
 
       {/* Debug API Yanıtı İnceleyici */}

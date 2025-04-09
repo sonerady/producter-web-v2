@@ -551,41 +551,36 @@ textarea:focus {
 
 .button-group {
   display: flex;
+  justify-content: flex-end;
   gap: 12px;
+  margin-top: auto;
 }
 
 .cancel-button,
-.save-button,
 .apply-button {
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 14px;
-  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: background-color 0.2s;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 15px;
 }
 
 .cancel-button {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background-color: #f2f2f4;
+  color: #666;
+  min-width: 100px;
 }
 
-.cancel-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.save-button,
 .apply-button {
   background-color: #0070f3;
-  color: #fff;
-}
-
-.save-button:hover,
-.apply-button:hover {
-  background-color: #0060d3;
+  color: white;
+  min-width: 120px;
 }
 
 .save-button:disabled {
@@ -790,4 +785,233 @@ textarea:focus {
   color: #666;
   width: 40px;
   text-align: right;
+}
+
+/* EditPromptModal with image styling */
+.edit-modal-with-image {
+  width: 85%;
+  max-width: 850px;
+  max-height: 80vh;
+  position: relative;
+  border-radius: 16px;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+.modal-close-btn:hover {
+  background: #fff;
+  transform: scale(1.05);
+}
+
+.modal-content-flex {
+  display: flex;
+  overflow: hidden;
+  border-radius: 16px;
+  height: 400px;
+}
+
+.edit-image-preview {
+  width: 50%;
+  background-color: #f3f3f7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  border-right: 1px solid #eaeaea;
+  position: relative;
+}
+
+.edit-image-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.edit-preview-image {
+  max-width: 90%;
+  max-height: 85%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease;
+  background-color: white;
+  padding: 10px;
+}
+
+.edit-image-label {
+  margin-top: 15px;
+  color: #555;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 6px 14px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.edit-form-container {
+  width: 50%;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.edit-form-inner {
+  display: flex;
+  flex-direction: column;
+  padding: 25px;
+  height: 100%;
+  background: #ffffff;
+  box-sizing: border-box;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.edit-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  flex-grow: 1;
+  padding: 16px;
+  border: 1px solid #e0e0e8;
+  border-radius: 10px;
+  resize: none;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  background-color: #f9f9fc;
+  margin-bottom: 0;
+  min-height: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) inset;
+  transition: all 0.2s ease;
+}
+
+.edit-textarea:focus {
+  outline: none;
+  border-color: #0070f3;
+  box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.15);
+}
+
+.edit-help-text {
+  font-size: 13px;
+  color: #777;
+  margin-top: 12px;
+  margin-bottom: 0;
+  font-style: italic;
+  text-align: center;
+  background-color: #f9f9fb;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 25px;
+  width: 100%;
+}
+
+.cancel-button,
+.apply-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 15px;
+  border-radius: 10px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 15px;
+  max-width: 150px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.cancel-button {
+  background-color: #f0f0f2;
+  color: #555;
+}
+
+.apply-button {
+  background-color: #0070f3;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #e5e5e7;
+}
+
+.apply-button:hover {
+  background-color: #0060d3;
+  transform: translateY(-1px);
+}
+
+.apply-button:disabled {
+  background-color: #9dc3f5;
+  cursor: not-allowed;
+}
+
+/* For responsive design on small screens */
+@media (max-width: 768px) {
+  .modal-content-flex {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .edit-image-preview {
+    border-right: none;
+    border-bottom: 1px solid #eaeaea;
+    min-height: 250px;
+  }
+
+  .edit-form-container {
+    min-height: 300px;
+  }
+
+  .edit-form-inner {
+    padding: 20px;
+  }
+}
+
+.edit-form-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-form-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 15px 0;
+  letter-spacing: 0.3px;
 }
