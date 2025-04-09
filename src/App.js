@@ -280,6 +280,7 @@ function WidgetResults({
   onRemoveBackground,
   style,
   previewUrl,
+  uploadedImage,
 }) {
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
@@ -729,7 +730,14 @@ function WidgetResults({
                         className="action-icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          downloadImage(image.url, `result-${index + 1}.jpg`);
+                          downloadImage(
+                            image.url,
+                            `${
+                              uploadedImage
+                                ? uploadedImage.name.replace(/\.[^/.]+$/, "")
+                                : "result"
+                            }_retouch.jpg`
+                          );
                         }}
                       >
                         <RiDownloadLine size={18} color="#333" />
@@ -755,7 +763,12 @@ function WidgetResults({
 }
 
 // Widget - Netleştirilmiş Sonuçlar Bileşeni
-function WidgetEnhancedResults({ enhancedImages, style, onCleanImage }) {
+function WidgetEnhancedResults({
+  enhancedImages,
+  style,
+  onCleanImage,
+  uploadedImage,
+}) {
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [fullscreenSourceImage, setFullscreenSourceImage] = useState(null);
 
@@ -1063,7 +1076,14 @@ function WidgetEnhancedResults({ enhancedImages, style, onCleanImage }) {
                               e.stopPropagation();
                               downloadImage(
                                 image.url,
-                                `enhanced-${index + 1}.jpg`
+                                `${
+                                  uploadedImage
+                                    ? uploadedImage.name.replace(
+                                        /\.[^/.]+$/,
+                                        ""
+                                      )
+                                    : "enhanced"
+                                }_retouch.jpg`
                               );
                             }}
                           >
@@ -1138,7 +1158,11 @@ function WidgetEnhancedResults({ enhancedImages, style, onCleanImage }) {
 }
 
 // Widget - Arkaplanı Kaldırılmış Sonuçlar Bileşeni
-function WidgetBackgroundRemovedResults({ removedBgImages, style }) {
+function WidgetBackgroundRemovedResults({
+  removedBgImages,
+  style,
+  uploadedImage,
+}) {
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [fullscreenSourceImage, setFullscreenSourceImage] = useState(null);
 
@@ -1456,7 +1480,17 @@ function WidgetBackgroundRemovedResults({ removedBgImages, style }) {
                             className="action-icon"
                             onClick={(e) => {
                               e.stopPropagation();
-                              downloadImage(image.url, `nobg-${index + 1}.png`);
+                              downloadImage(
+                                image.url,
+                                `${
+                                  uploadedImage
+                                    ? uploadedImage.name.replace(
+                                        /\.[^/.]+$/,
+                                        ""
+                                      )
+                                    : "nobg"
+                                }_retouch.png`
+                              );
                             }}
                           >
                             <RiDownloadLine />
@@ -1701,7 +1735,26 @@ function CropModal({ isOpen, onClose, imageUrl, onCropComplete }) {
               return;
             }
 
-            const file = new File([blob], "cropped-image.jpg", {
+            // Orijinal dosyadan extension'ı çıkartan fonksiyon
+            const getOriginalFileName = () => {
+              // imageUrl'den dosya adını çıkar (blob URL veya data URL olabilir)
+              if (
+                imageUrl.startsWith("blob:") ||
+                imageUrl.startsWith("data:")
+              ) {
+                // Bu durumda orijinal dosya adına erişemiyoruz, "cropped-image" kullan
+                return "cropped-image.jpg";
+              }
+
+              // URL path'inden dosya adını çıkar
+              const urlParts = imageUrl.split("/");
+              const fileName = urlParts[urlParts.length - 1];
+
+              // Query parametrelerini temizle
+              return fileName.split("?")[0] || "cropped-image.jpg";
+            };
+
+            const file = new File([blob], getOriginalFileName(), {
               type: "image/jpeg",
             });
 
@@ -2582,8 +2635,27 @@ function App() {
   };
 
   const handleCropComplete = (croppedFile) => {
-    // Kırpılmış görüntüyü ana görüntü olarak ayarla
-    setUploadedImage(croppedFile);
+    // Orijinal dosya adını koruyalım ve uploadedImage'e aktaralım
+    if (uploadedImage && uploadedImage.name) {
+      // Orijinal dosya adını ve tipini al, uzantıyı koru
+      const extension = croppedFile.name.split(".").pop();
+      const originalName = uploadedImage.name.split(".")[0];
+
+      // Aynı içerikli ama orijinal isimli bir dosya oluştur
+      const renamedFile = new File(
+        [croppedFile],
+        `${originalName}.${extension}`,
+        {
+          type: croppedFile.type,
+        }
+      );
+
+      // Kırpılmış görüntüyü ana görüntü olarak ayarla
+      setUploadedImage(renamedFile);
+    } else {
+      // Orijinal dosya adı yoksa doğrudan kullan
+      setUploadedImage(croppedFile);
+    }
 
     // Eski URL'yi temizle ve bellekten serbest bırak
     if (imageUrl) {
@@ -2628,7 +2700,11 @@ function App() {
         // Görüntüyü blob olarak al
         const response = await fetch(imageUrl);
         const blob = await response.blob();
-        const file = new File([blob], "cropped-image.jpg", {
+
+        // Yüklenen resmin orijinal dosya adını kullan
+        const fileName = uploadedImage ? uploadedImage.name : "image.jpg";
+
+        const file = new File([blob], fileName, {
           type: "image/jpeg",
         });
 
@@ -2921,11 +2997,9 @@ function App() {
     if (!imageUrl) return;
 
     try {
-      // İşlem durumunu güncelle
       setIsEnhancing(true);
       setEnhancingIndex(index);
 
-      // EnhancedImages state'ini başlat veya güncelle
       setEnhancedImages((prev) => {
         const newImages = prev || Array(4).fill(null);
         newImages[index] = {
@@ -2937,19 +3011,14 @@ function App() {
         return newImages;
       });
 
-      // API endpoint
-      const apiBaseUrl =
-        process.env.REACT_APP_API_URL || "http://localhost:3001";
-      const apiUrl = `${apiBaseUrl}/api/image-clarity`;
-
-      // API isteği
-      const response = await fetch(apiUrl, {
+      const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const response = await fetch(`${apiBaseUrl}/api/image-clarity`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          imageUrl: imageUrl,
+          imageUrl,
           mode: "flux",
           creativity: 4,
           prompt: "Enhance this product image with higher clarity and details.",
@@ -2960,27 +3029,26 @@ function App() {
         throw new Error(`API error: ${response.status}`);
       }
 
-      const responseData = await response.json();
+      const data = await response.json();
 
-      // Başarılı yanıt kontrolü
-      if (responseData.success && responseData.upscaledImageUrl) {
-        setEnhancedImages((prev) => {
-          const newImages = [...(prev || Array(4).fill(null))];
-          newImages[index] = {
-            id: index,
-            url: responseData.upscaledImageUrl,
-            loading: false,
-            sourceImageUrl: imageUrl,
-          };
-          return newImages;
-        });
-      } else {
+      if (!data.success || !data.upscaledImageUrl) {
         throw new Error("No enhanced image URL in response");
       }
+
+      setEnhancedImages((prev) => {
+        const newImages = [...(prev || Array(4).fill(null))];
+        newImages[index] = {
+          id: index,
+          url: data.upscaledImageUrl,
+          loading: false,
+          sourceImageUrl: imageUrl,
+        };
+        return newImages;
+      });
+
     } catch (error) {
       console.error("Enhancement error:", error);
 
-      // Hata durumunda state'i güncelle
       setEnhancedImages((prev) => {
         const newImages = [...(prev || Array(4).fill(null))];
         newImages[index] = {
@@ -2992,7 +3060,6 @@ function App() {
         return newImages;
       });
 
-      // Kullanıcıya hata mesajı göster
       alert("Görüntü netleştirilemedi. Lütfen daha sonra tekrar deneyin.");
     } finally {
       setIsEnhancing(false);
@@ -3329,6 +3396,7 @@ function App() {
           onRemoveBackground={handleRemoveBackground}
           style={{ flex: "1.5" }}
           previewUrl={imageUrl}
+          uploadedImage={uploadedImage}
         />
 
         <div
@@ -3345,11 +3413,13 @@ function App() {
             enhancedImages={enhancedImages}
             style={{ height: "fit-content" }}
             onCleanImage={handleCleanImage}
+            uploadedImage={uploadedImage}
           />
 
           <WidgetBackgroundRemovedResults
             removedBgImages={removedBgImages}
             style={{ height: "fit-content" }}
+            uploadedImage={uploadedImage}
           />
         </div>
       </div>
