@@ -3011,7 +3011,8 @@ function App() {
         return newImages;
       });
 
-      const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const apiBaseUrl =
+        process.env.REACT_APP_API_URL || "https://dires-server.onrender.com";
       const response = await fetch(`${apiBaseUrl}/api/image-clarity`, {
         method: "POST",
         headers: {
@@ -3045,7 +3046,6 @@ function App() {
         };
         return newImages;
       });
-
     } catch (error) {
       console.error("Enhancement error:", error);
 
