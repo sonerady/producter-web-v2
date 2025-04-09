@@ -3105,7 +3105,7 @@ function App() {
 
       // API endpoint
       const apiBaseUrl =
-        process.env.REACT_APP_API_URL || "http://localhost:3001";
+        process.env.REACT_APP_API_URL || "https://dires-server.onrender.com";
       const apiUrl = `${apiBaseUrl}/api/remove-background`;
 
       console.log("Arkaplan kaldırma API isteği gönderiliyor:", apiUrl);
