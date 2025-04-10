@@ -3021,7 +3021,7 @@ function App() {
         body: JSON.stringify({
           imageUrl,
           mode: "flux",
-          creativity: 4,
+          creativity: 2,
           prompt: "Enhance this product image with higher clarity and details.",
         }),
       });
