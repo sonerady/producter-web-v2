@@ -8,9 +8,8 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  background-color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  margin-top: 10px;
 }
 
 .navbar.scrolled {
@@ -18,13 +17,16 @@
 }
 
 .navbar-container {
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
   max-width: 1200px;
-  padding: 0 24px;
   height: 100%;
+  border: 1px solid #e0e0e0;
 }
 
 .navbar-logo {
