@@ -5,6 +5,7 @@ import {
   RiCloseLine,
   RiFullscreenLine,
   RiDownloadLine,
+  RiSparklingLine,
 } from "@remixicon/react";
 import FullscreenImageModal from "../modals/FullscreenImageModal";
 
@@ -15,6 +16,47 @@ function WidgetBackgroundRemovedResults({
 }) {
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [fullscreenSourceImage, setFullscreenSourceImage] = useState(null);
+  const [processingTimes, setProcessingTimes] = useState({});
+
+  // Timer için useEffect hook'u
+  useEffect(() => {
+    const timers = {};
+
+    if (removedBgImages) {
+      removedBgImages.forEach((image, index) => {
+        if (image && image.loading) {
+          // Her yüklenen görsel için bir sayaç başlat
+          if (!timers[index]) {
+            timers[index] = {
+              startTime: Date.now(),
+              intervalId: setInterval(() => {
+                setProcessingTimes((prev) => {
+                  const elapsedSeconds = Math.floor(
+                    (Date.now() - timers[index].startTime) / 1000
+                  );
+                  return {
+                    ...prev,
+                    [index]: elapsedSeconds,
+                  };
+                });
+              }, 1000),
+            };
+          }
+        } else if (timers[index]) {
+          // Yükleme bittiyse sayacı durdur
+          clearInterval(timers[index].intervalId);
+          delete timers[index];
+        }
+      });
+    }
+
+    // Cleanup function
+    return () => {
+      Object.values(timers).forEach((timer) => {
+        clearInterval(timer.intervalId);
+      });
+    };
+  }, [removedBgImages]);
 
   // Tam ekran modalı açma fonksiyonu
   const handleOpenFullscreen = (imageUrl, sourceImageUrl) => {
@@ -63,6 +105,17 @@ function WidgetBackgroundRemovedResults({
     ? removedBgImages.filter((img) => img !== null && !img.loading).length
     : 0;
 
+  // Süre formatı
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+    return `${remainingSeconds}s`;
+  };
+
   // Şeffaf arka plan için dama deseni CSS
   const checkerboardBg = {
     backgroundImage: `linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
@@ -74,34 +127,8 @@ function WidgetBackgroundRemovedResults({
     backgroundColor: "#ffffff",
   };
 
-  // Süre formatı
-  const formatTime = (seconds) => {
-    return `${seconds}s`;
-  };
-
-  // İşleme süresi için sayaç
-  const [processingTime, setProcessingTime] = useState(0);
-
-  // Arkaplan silme işlemi sırasında süre sayacı
+  // Spinner ve stil ekleme
   useEffect(() => {
-    let timer;
-    if (removedBgImages && removedBgImages.some((img) => img && img.loading)) {
-      // İşlem başladığında süre sayacını başlat
-      timer = setInterval(() => {
-        setProcessingTime((prevTime) => prevTime + 1);
-      }, 1000);
-    } else {
-      // İşlem bittiğinde sayacı sıfırla
-      setProcessingTime(0);
-    }
-
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [removedBgImages]);
-
-  useEffect(() => {
-    // Spinner ve stil ekleme
     const style = document.createElement("style");
     style.textContent = `
       @keyframes spin {
@@ -112,11 +139,16 @@ function WidgetBackgroundRemovedResults({
       .spinner {
         width: 50px;
         height: 50px;
-        border: 4px solid rgba(0, 0, 0, 0.1);
+        border: 5px solid rgba(0, 0, 0, 0.1);
         border-radius: 50%;
-        border-top-color: #8A2BE2;
-        border-left-color: #8A2BE2;
-        animation: spin 1s linear infinite;
+        border-top: 5px solid #8A2BE2;
+        border-left: 5px solid #8A2BE2;
+        border-right: 5px solid transparent;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+        box-sizing: border-box;
+        vertical-align: middle;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
       }
 
       .processing-time {
@@ -127,6 +159,43 @@ function WidgetBackgroundRemovedResults({
         color: #8A2BE2;
         font-weight: 600;
         font-size: 14px;
+      }
+      
+      .background-removed-results-panel .action-icon {
+        background-color: white;
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        margin: 0 5px;
+        color: #333;
+        transition: all 0.2s ease;
+      }
+      
+      .background-removed-results-panel .action-icon:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      }
+      
+      .background-removed-results-panel .result-actions {
+        position: absolute;
+        bottom: 10px;
+        left: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 8px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      
+      .background-removed-results-panel .result-item:hover .result-actions {
+        opacity: 1;
       }
     `;
     document.head.appendChild(style);
@@ -151,24 +220,15 @@ function WidgetBackgroundRemovedResults({
         border: "1px solid #e0e0e073",
       }}
     >
-      <h2>
-        <span className="icon-placeholder">
-          <RiEraserLine />
-        </span>{" "}
-        Arkaplanı Kaldırılmış Sonuçlar
-        {removedBgImages &&
-          removedBgImages.some((img) => img && img.loading) && (
-            <span
-              style={{
-                marginLeft: "10px",
-                fontSize: "14px",
-                color: "#8A2BE2",
-                fontWeight: "500",
-              }}
-            >
-              İşleniyor... {formatTime(processingTime)}
-            </span>
-          )}
+      <h2
+        style={{
+          fontSize: "16px",
+          fontWeight: "500",
+          margin: "0 0 15px 0",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Arkaplan kaldırma
       </h2>
 
       <div
@@ -178,11 +238,10 @@ function WidgetBackgroundRemovedResults({
         <div
           className="results-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fill, minmax(calc(50% - 10px), 1fr))",
-            gap: "10px",
-            alignItems: "flex-start",
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+            alignItems: "center",
           }}
         >
           {!removedBgImages
@@ -195,6 +254,7 @@ function WidgetBackgroundRemovedResults({
                     className="result-item placeholder"
                     style={{
                       position: "relative",
+                      width: "100%",
                       aspectRatio: "1/1",
                       borderRadius: "8px",
                       backgroundColor: "#f0f0f0",
@@ -235,6 +295,7 @@ function WidgetBackgroundRemovedResults({
                         className="result-item placeholder"
                         style={{
                           position: "relative",
+                          width: "100%",
                           aspectRatio: "1/1",
                           borderRadius: "8px",
                           backgroundColor: "#f0f0f0",
@@ -275,26 +336,80 @@ function WidgetBackgroundRemovedResults({
                         overflow: "hidden",
                         border: "1px solid #eee",
                         backgroundColor: "#fff",
+                        width: "100%",
                       }}
                     >
                       {image.loading ? (
-                        // Yükleniyor durumu - Basit beyaz arka plan
+                        // Yükleniyor durumu - Arkaplanda blur kaynak resim göster
                         <div
+                          className="loading-spinner"
                           style={{
+                            position: "relative",
+                            width: "100%",
+                            height: "0",
+                            paddingBottom: "100%", // Kare oran için 1:1 aspect ratio
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            height: "100%",
-                            width: "100%",
-                            position: "relative",
-                            backgroundColor: "#ffffff",
-                            borderRadius: "8px",
+                            borderRadius: "4px",
+                            overflow: "hidden", // Taşan içeriği kırp
                           }}
                         >
-                          <div className="spinner"></div>
-                          <span className="processing-time">
-                            {formatTime(processingTime)}
-                          </span>
+                          {/* Kaynak resmi blur ile arka planda göster */}
+                          {image.sourceImageUrl && (
+                            <img
+                              src={image.sourceImageUrl}
+                              alt="Kaynak görüntü"
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                filter: "blur(8px)",
+                                opacity: "0.7",
+                              }}
+                            />
+                          )}
+
+                          {/* Spinner ortada */}
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              zIndex: 2,
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              padding: "15px",
+                              borderRadius: "10px",
+                            }}
+                          >
+                            <div
+                              className="spinner"
+                              style={{
+                                display: "block",
+                                margin: "0 auto",
+                              }}
+                            ></div>
+                            <div
+                              style={{
+                                marginTop: "10px",
+                                textAlign: "center",
+                                color: "#8A2BE2",
+                                fontWeight: "500",
+                                fontSize: "14px",
+                                textShadow: "0 0 5px white",
+                              }}
+                            >
+                              {processingTimes[index] !== undefined
+                                ? formatTime(processingTimes[index])
+                                : "Başlatılıyor..."}
+                            </div>
+                          </div>
                         </div>
                       ) : image.error ? (
                         // Hata durumu
@@ -398,28 +513,6 @@ function WidgetBackgroundRemovedResults({
                   );
                 })}
         </div>
-        {processedCount === 0 && removedBgImages && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "20px",
-              color: "#888",
-            }}
-          >
-            <p>
-              Rötuşlama tamamlandıktan sonra arkaplan kaldırma
-              uygulayabilirsiniz.
-            </p>
-          </div>
-        )}
-        {!removedBgImages && (
-          <p
-            className="help-text"
-            style={{ textAlign: "center", color: "#888", margin: "20px 0" }}
-          >
-            Rötuşlama tamamlandıktan sonra arkaplan kaldırma uygulayabilirsiniz.
-          </p>
-        )}
       </div>
 
       {/* Tam ekran modal */}

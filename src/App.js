@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 import "react-image-crop/dist/ReactCrop.css";
 import Navbar from "./components/Navbar";
@@ -8,6 +9,7 @@ import WidgetEnhancedResults from "./components/widgets/WidgetEnhancedResults";
 import WidgetBackgroundRemovedResults from "./components/widgets/WidgetBackgroundRemovedResults";
 import CropModal from "./components/modals/CropModal";
 import EditPromptModal from "./components/modals/EditPromptModal";
+import Login from "./components/login/Login";
 
 // Rötuşlama API sonucunu incelemek için Debug Bileşeni
 function ResponseInspector({ response }) {
@@ -44,7 +46,7 @@ function ResponseInspector({ response }) {
   );
 }
 
-function App() {
+function MainApp() {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [imageUrl, setImageUrl] = useState(null);
   const [resultImages, setResultImages] = useState(null);
@@ -980,23 +982,31 @@ function App() {
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
+            flexDirection: "row",
             flex: "1",
-            gap: "20px",
-            alignItems: "stretch",
+            gap: "15px",
+            alignItems: "flex-start",
             alignSelf: "flex-start",
           }}
         >
           <WidgetEnhancedResults
             enhancedImages={enhancedImages}
-            style={{ height: "fit-content" }}
+            style={{
+              flex: "1",
+              height: "fit-content",
+              maxWidth: "50%",
+            }}
             onCleanImage={handleCleanImage}
             uploadedImage={uploadedImage}
           />
 
           <WidgetBackgroundRemovedResults
             removedBgImages={removedBgImages}
-            style={{ height: "fit-content" }}
+            style={{
+              flex: "1",
+              height: "fit-content",
+              maxWidth: "50%",
+            }}
             uploadedImage={uploadedImage}
           />
         </div>
@@ -1026,6 +1036,49 @@ function App() {
       {/* Debug API Yanıtı İnceleyici */}
       <ResponseInspector response={debugResponse} />
     </div>
+  );
+}
+
+function App() {
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check if user is authenticated on load
+  useEffect(() => {
+    // For example, check localStorage or a token
+    const token = localStorage.getItem("userToken");
+    if (token) {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  // Login handler
+  const handleLogin = () => {
+    // Set auth state to true after successful login
+    setIsAuthenticated(true);
+    // Store token or user data
+    localStorage.setItem("userToken", "dummy-token");
+  };
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/" replace />
+          ) : (
+            <Login onLogin={handleLogin} />
+          )
+        }
+      />
+      <Route
+        path="/*"
+        element={
+          isAuthenticated ? <MainApp /> : <Navigate to="/login" replace />
+        }
+      />
+    </Routes>
   );
 }
 

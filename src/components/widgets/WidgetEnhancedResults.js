@@ -18,6 +18,58 @@ function WidgetEnhancedResults({
 }) {
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [fullscreenSourceImage, setFullscreenSourceImage] = useState(null);
+  const [processingTimes, setProcessingTimes] = useState({});
+
+  // Timer için useEffect hook'u
+  useEffect(() => {
+    const timers = {};
+
+    if (enhancedImages) {
+      enhancedImages.forEach((image, index) => {
+        if (image && image.loading) {
+          // Her yüklenen görsel için bir sayaç başlat
+          if (!timers[index]) {
+            timers[index] = {
+              startTime: Date.now(),
+              intervalId: setInterval(() => {
+                setProcessingTimes((prev) => {
+                  const elapsedSeconds = Math.floor(
+                    (Date.now() - timers[index].startTime) / 1000
+                  );
+                  return {
+                    ...prev,
+                    [index]: elapsedSeconds,
+                  };
+                });
+              }, 1000),
+            };
+          }
+        } else if (timers[index]) {
+          // Yükleme bittiyse sayacı durdur
+          clearInterval(timers[index].intervalId);
+          delete timers[index];
+        }
+      });
+    }
+
+    // Cleanup function
+    return () => {
+      Object.values(timers).forEach((timer) => {
+        clearInterval(timer.intervalId);
+      });
+    };
+  }, [enhancedImages]);
+
+  // Saniye formatını "1m 2s" formatına çevirme
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+    return `${remainingSeconds}s`;
+  };
 
   // Tam ekran modalı açma fonksiyonu
   const handleOpenFullscreen = (imageUrl, sourceImageUrl) => {
@@ -77,12 +129,28 @@ function WidgetEnhancedResults({
       }
       
       .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid rgba(0, 0, 0, 0.1);
+        width: 50px;
+        height: 50px;
+        border: 5px solid rgba(0, 0, 0, 0.1);
         border-radius: 50%;
-        border-top-color: #3498db;
-        animation: spin 1s linear infinite;
+        border-top: 5px solid #8A2BE2;
+        border-left: 5px solid #8A2BE2;
+        border-right: 5px solid transparent;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+        box-sizing: border-box;
+        vertical-align: middle;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      }
+      
+      .processing-time {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #8A2BE2;
+        font-weight: 600;
+        font-size: 14px;
       }
     `;
     document.head.appendChild(style);
@@ -108,11 +176,14 @@ function WidgetEnhancedResults({
         border: "1px solid #e0e0e073",
       }}
     >
-      <h2>
-        <span className="icon-placeholder">
-          <RiSearchEyeLine />
-        </span>{" "}
-        Netleştirilmiş Sonuçlar
+      <h2
+        style={{
+          fontSize: "16px",
+          fontWeight: "500",
+          margin: "0 0 15px 0",
+        }}
+      >
+        Netleştirme
       </h2>
 
       <div
@@ -122,11 +193,10 @@ function WidgetEnhancedResults({
         <div
           className="results-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fill, minmax(calc(50% - 10px), 1fr))",
-            gap: "10px",
-            alignItems: "flex-start",
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+            alignItems: "center",
           }}
         >
           {!enhancedImages
@@ -139,6 +209,7 @@ function WidgetEnhancedResults({
                     className="result-item placeholder"
                     style={{
                       position: "relative",
+                      width: "100%",
                       aspectRatio: "1/1",
                       borderRadius: "8px",
                       backgroundColor: "#f0f0f0",
@@ -179,6 +250,7 @@ function WidgetEnhancedResults({
                         className="result-item placeholder"
                         style={{
                           position: "relative",
+                          width: "100%",
                           aspectRatio: "1/1",
                           borderRadius: "8px",
                           backgroundColor: "#f0f0f0",
@@ -215,6 +287,7 @@ function WidgetEnhancedResults({
                         position: "relative",
                         height: "100%",
                         minHeight: "120px",
+                        width: "100%",
                         borderRadius: "8px",
                         overflow: "hidden",
                         border: "1px solid #eee",
@@ -222,7 +295,7 @@ function WidgetEnhancedResults({
                       }}
                     >
                       {image.loading ? (
-                        // Yükleniyor durumu
+                        // Yükleniyor durumu - Arkaplanda blur kaynak resim göster
                         <div
                           className="loading-spinner"
                           style={{
@@ -233,12 +306,11 @@ function WidgetEnhancedResults({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            backgroundColor: "rgba(0, 0, 0, 0.05)",
                             borderRadius: "4px",
                             overflow: "hidden", // Taşan içeriği kırp
                           }}
                         >
-                          {/* Netleştirilen kaynak resmi arka planda göster */}
+                          {/* Kaynak resmi blur ile arka planda göster */}
                           {image.sourceImageUrl && (
                             <img
                               src={image.sourceImageUrl}
@@ -250,43 +322,48 @@ function WidgetEnhancedResults({
                                 width: "100%",
                                 height: "100%",
                                 objectFit: "cover",
-                                opacity: 0.5,
-                                filter: "blur(2px)",
+                                filter: "blur(8px)",
+                                opacity: "0.7",
                               }}
-                              onError={(e) =>
-                                console.error(
-                                  "Kaynak görüntü yüklenirken hata:",
-                                  e
-                                )
-                              }
                             />
                           )}
 
+                          {/* Spinner ortada */}
                           <div
                             style={{
                               position: "absolute",
-                              top: 0,
-                              left: 0,
-                              width: "100%",
-                              height: "100%",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              zIndex: 2,
                               display: "flex",
                               flexDirection: "column",
                               alignItems: "center",
-                              justifyContent: "center",
-                              backgroundColor: "rgba(255, 255, 255, 0.7)",
-                              zIndex: 2,
+                              padding: "15px",
+                              borderRadius: "10px",
                             }}
                           >
-                            <div className="spinner"></div>
-                            <span
+                            <div
+                              className="spinner"
+                              style={{
+                                display: "block",
+                                margin: "0 auto",
+                              }}
+                            ></div>
+                            <div
                               style={{
                                 marginTop: "10px",
+                                textAlign: "center",
+                                color: "#8A2BE2",
+                                fontWeight: "500",
                                 fontSize: "14px",
-                                color: "#666",
+                                textShadow: "0 0 5px white",
                               }}
                             >
-                              Netleştiriliyor...
-                            </span>
+                              {processingTimes[index] !== undefined
+                                ? formatTime(processingTimes[index])
+                                : "Başlatılıyor..."}
+                            </div>
                           </div>
                         </div>
                       ) : image.error ? (
@@ -406,28 +483,6 @@ function WidgetEnhancedResults({
         </div>
 
         {/* Eğer hiç netleştirilmiş görüntü yoksa ve yükleme işlemi de yoksa uygun mesajı göster */}
-        {enhancedImages && processedCount === 0 && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "20px",
-              color: "#888",
-            }}
-          >
-            <p>
-              Rötuşlama tamamlandıktan sonra netleştirmek istediğiniz görselin
-              AI netleştirme butonuna tıklayın.
-            </p>
-          </div>
-        )}
-        {!enhancedImages && (
-          <p
-            className="help-text"
-            style={{ textAlign: "center", color: "#888", margin: "20px 0" }}
-          >
-            Rötuşlama tamamlandıktan sonra AI netleştirme uygulayabilirsiniz.
-          </p>
-        )}
       </div>
 
       {/* Tam ekran modal */}
