@@ -4,20 +4,24 @@
     "Helvetica Neue", Arial, sans-serif;
   background-color: #f5f5f7;
   min-height: 100vh;
-  padding: 20px 0;
+  padding: 0; /* Remove top padding since navbar will be fixed */
+  position: relative;
+  padding-bottom: 20px;
 }
 
 .container {
   display: flex;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 24px;
   gap: 20px;
+  padding-top: 70px; /* Add padding to account for fixed navbar */
 }
 
 @media (max-width: 900px) {
   .container {
     flex-direction: column;
+    padding-top: 70px; /* Keep consistent with desktop */
   }
 }
 

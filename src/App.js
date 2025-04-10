@@ -18,6 +18,7 @@ import {
   ReactCompareSliderImage,
   ReactCompareSliderHandle,
 } from "react-compare-slider";
+import Navbar from "./components/Navbar";
 
 // İkonlar için
 import {
@@ -3364,7 +3365,11 @@ function App() {
 
   return (
     <div className="App">
-      <div className="container" style={{ display: "flex", gap: "20px" }}>
+      <Navbar />
+      <div
+        className="container"
+        style={{ display: "flex", gap: "20px", marginTop: "70px" }}
+      >
         <WidgetSourceAndPrompt
           onImageUpload={handleFileChange}
           previewUrl={imageUrl}
