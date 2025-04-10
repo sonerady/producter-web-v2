@@ -6,7 +6,9 @@ import {
   RiNotification2Line,
   RiArrowUpSLine,
   RiMenuLine,
+  RiUser3Line,
 } from "@remixicon/react";
+import productorLogo from "../assets/producter-logo.png";
 
 function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -42,12 +44,7 @@ function Navbar() {
       <div className="navbar-container">
         <div className="navbar-logo">
           <a href="/">
-            <span className="logo-text">
-              <span className="logo-icon">
-                <RiArrowUpSLine />
-              </span>
-              SaasBox
-            </span>
+            <img src={productorLogo} alt="Producter" className="logo-image" />
           </a>
         </div>
 
@@ -79,12 +76,9 @@ function Navbar() {
           <button className="icon-button">
             <RiNotification2Line />
           </button>
-          <div className="status-badge">
-            <span className="status-text">Online</span>
-          </div>
-          <div className="avatar">
-            <img src="https://via.placeholder.com/36" alt="User profile" />
-          </div>
+          <button className="icon-button user-icon">
+            <RiUser3Line />
+          </button>
           <button
             className="mobile-menu-button"
             onClick={toggleMobileMenu}

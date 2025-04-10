@@ -162,9 +162,6 @@ function WidgetEnhancedResults({
                       }}
                     >
                       <RiImageLine size={32} />
-                      <span style={{ marginTop: "5px", fontSize: "12px" }}>
-                        Bekleniyor
-                      </span>
                     </div>
                   </div>
                 ))
@@ -205,9 +202,6 @@ function WidgetEnhancedResults({
                           }}
                         >
                           <RiImageLine size={32} />
-                          <span style={{ marginTop: "5px", fontSize: "12px" }}>
-                            Bekleniyor
-                          </span>
                         </div>
                       </div>
                     );
