@@ -10,6 +10,7 @@ import {
   RiCloseLine,
 } from "@remixicon/react";
 import FullscreenImageModal from "../modals/FullscreenImageModal";
+import { injectStyle } from "../../utils/styleManager";
 
 function WidgetResults({
   resultImages,
@@ -72,36 +73,11 @@ function WidgetResults({
   };
 
   // Dosya indirme fonksiyonu
-  const downloadImage = (url, filename) => {
+  const downloadImage = (url, filename = "download.jpg") => {
     console.log("İndiriliyor:", url);
 
-    // Supabase URL'den direkt indirme
-    fetch(url, {
-      method: "GET",
-      mode: "cors",
-    })
-      .then((response) => response.blob())
-      .then((blob) => {
-        const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = filename || "download.jpg";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
-      })
-      .catch((error) => {
-        console.error("İndirme hatası:", error);
-        // Fallback - doğrudan URL ile dene
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename || "download.jpg";
-        a.target = "_blank";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      });
+    // Görüntüyü yeni sekmede açıp kullanıcının sağ tıklayıp kaydetmesini sağla
+    window.open(url, "_blank");
   };
 
   // Görüntü yükleme hatası işleme
@@ -147,8 +123,7 @@ function WidgetResults({
   // Dinamik stil ekleme
   useEffect(() => {
     // Spinner animasyonu için CSS ekleme
-    const style = document.createElement("style");
-    style.textContent = `
+    const css = `
       .result-image-container {
         transition: all 0.3s ease;
       }
@@ -214,12 +189,12 @@ function WidgetResults({
         font-size: 14px;
       }
     `;
-    document.head.appendChild(style);
+
+    // Use the style manager to safely inject and manage the style
+    const cleanup = injectStyle(css, "widget-results-styles");
 
     // Temizleme fonksiyonu
-    return () => {
-      document.head.removeChild(style);
-    };
+    return cleanup;
   }, []);
 
   return (
@@ -403,10 +378,7 @@ function WidgetResults({
                         className="action-icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          downloadImage(
-                            result.url,
-                            `retouched_image_${index + 1}.jpg`
-                          );
+                          downloadImage(result.url);
                         }}
                         title="İndir"
                       >

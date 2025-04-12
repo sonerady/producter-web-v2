@@ -8,6 +8,7 @@ import {
   RiSparklingLine,
 } from "@remixicon/react";
 import FullscreenImageModal from "../modals/FullscreenImageModal";
+import { injectStyle } from "../../utils/styleManager";
 
 function WidgetBackgroundRemovedResults({
   removedBgImages,
@@ -129,8 +130,7 @@ function WidgetBackgroundRemovedResults({
 
   // Spinner ve stil ekleme
   useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
+    const css = `
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
@@ -198,11 +198,12 @@ function WidgetBackgroundRemovedResults({
         opacity: 1;
       }
     `;
-    document.head.appendChild(style);
 
-    return () => {
-      document.head.removeChild(style);
-    };
+    // Use the style manager to safely inject and manage the style
+    const cleanup = injectStyle(css, "widget-bg-removed-results-styles");
+
+    // Temizleme fonksiyonu
+    return cleanup;
   }, []);
 
   return (

@@ -9,6 +9,7 @@ import {
   RiCloseLine,
 } from "@remixicon/react";
 import FullscreenImageModal from "../modals/FullscreenImageModal";
+import { injectStyle } from "../../utils/styleManager";
 
 function WidgetEnhancedResults({
   enhancedImages,
@@ -121,8 +122,7 @@ function WidgetEnhancedResults({
   // Dinamik stil ekleme
   useEffect(() => {
     // Spinner animasyonu için CSS ekleme
-    const style = document.createElement("style");
-    style.textContent = `
+    const css = `
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
@@ -153,12 +153,12 @@ function WidgetEnhancedResults({
         font-size: 14px;
       }
     `;
-    document.head.appendChild(style);
+
+    // Use the style manager to safely inject and manage the style
+    const cleanup = injectStyle(css, "widget-enhanced-results-styles");
 
     // Temizleme fonksiyonu
-    return () => {
-      document.head.removeChild(style);
-    };
+    return cleanup;
   }, []);
 
   return (

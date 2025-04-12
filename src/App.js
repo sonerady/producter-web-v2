@@ -10,6 +10,7 @@ import WidgetBackgroundRemovedResults from "./components/widgets/WidgetBackgroun
 import CropModal from "./components/modals/CropModal";
 import EditPromptModal from "./components/modals/EditPromptModal";
 import Login from "./components/login/Login";
+import { injectStyle } from "./utils/styleManager";
 
 // Rötuşlama API sonucunu incelemek için Debug Bileşeni
 function ResponseInspector({ response }) {
@@ -80,8 +81,7 @@ function MainApp() {
   // Dinamik stil ekleme
   useEffect(() => {
     // Spinner animasyonu için CSS ekleme
-    const style = document.createElement("style");
-    style.textContent = `
+    const css = `
       .result-image-container {
         transition: all 0.3s ease;
       }
@@ -155,12 +155,12 @@ function MainApp() {
         animation: checkboxPulse 0.5s;
       }
     `;
-    document.head.appendChild(style);
+
+    // Use the style manager to safely inject and manage the style
+    const cleanup = injectStyle(css, "main-app-styles");
 
     // Temizleme fonksiyonu
-    return () => {
-      document.head.removeChild(style);
-    };
+    return cleanup;
   }, []);
 
   const handleFileChange = (e) => {
