@@ -49,11 +49,19 @@ function removeStyle(styleId) {
 
   if (refCount <= 0) {
     // Remove style element when no more references
-    const styleElement = document.getElementById(styleId);
-    if (styleElement && styleElement.parentNode === document.head) {
-      document.head.removeChild(styleElement);
+    try {
+      const styleElement = document.getElementById(styleId);
+      if (styleElement) {
+        // Simply use the Element.remove() method
+        // This is supported in all modern browsers and avoids removeChild entirely
+        styleElement.remove();
+      }
+    } catch (error) {
+      console.warn(`Failed to remove style element ${styleId}:`, error);
+    } finally {
+      // Always clean up the reference
+      styleRefs.delete(styleId);
     }
-    styleRefs.delete(styleId);
   } else {
     // Update reference count
     styleRefs.set(styleId, refCount);

@@ -45,24 +45,36 @@ function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
       .then((response) => response.blob())
       .then((blob) => {
         const blobUrl = window.URL.createObjectURL(blob);
+
+        // Create invisible link element with download attribute
+        // and click it programmatically, without appending to DOM
         const a = document.createElement("a");
+        a.style.display = "none";
         a.href = blobUrl;
         a.download = filename;
-        document.body.appendChild(a);
+
+        // Click the link without adding to DOM
         a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
+
+        // Clean up the blob URL
+        setTimeout(() => {
+          window.URL.revokeObjectURL(blobUrl);
+        }, 100);
       })
       .catch((error) => {
         console.error("İndirme hatası:", error);
         // Fallback - direct URL method
+
+        // Create invisible link element with download attribute
+        // and click it programmatically, without appending to DOM
         const a = document.createElement("a");
+        a.style.display = "none";
         a.href = imageUrl;
         a.download = filename;
         a.target = "_blank";
-        document.body.appendChild(a);
+
+        // Click the link without adding to DOM
         a.click();
-        document.body.removeChild(a);
       });
   };
 

@@ -80,24 +80,34 @@ function WidgetBackgroundRemovedResults({
       .then((response) => response.blob())
       .then((blob) => {
         const blobUrl = window.URL.createObjectURL(blob);
+
+        // Create invisible link and trigger download without DOM appending
         const a = document.createElement("a");
+        a.style.display = "none";
         a.href = blobUrl;
         a.download = filename || "nobg-image.png";
-        document.body.appendChild(a);
+
+        // Click the link without adding to DOM
         a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
+
+        // Clean up the blob URL after a short delay
+        setTimeout(() => {
+          window.URL.revokeObjectURL(blobUrl);
+        }, 100);
       })
       .catch((error) => {
         console.error("İndirme hatası:", error);
         // Fallback - doğrudan URL ile dene
+
+        // Create invisible link and trigger download without DOM appending
         const a = document.createElement("a");
+        a.style.display = "none";
         a.href = url;
         a.download = filename || "nobg-image.png";
         a.target = "_blank";
-        document.body.appendChild(a);
+
+        // Click the link without adding to DOM
         a.click();
-        document.body.removeChild(a);
       });
   };
 
