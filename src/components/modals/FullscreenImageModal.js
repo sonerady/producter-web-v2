@@ -15,11 +15,56 @@ import {
   ReactCompareSliderHandle,
 } from "react-compare-slider";
 
+// Custom hook for key press handling
+function useKeyPress(targetKey, callback) {
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === targetKey) {
+        callback();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [targetKey, callback]);
+}
+
 function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
   const [scale, setScale] = useState(0.8);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
+  const [isModalMounted, setIsModalMounted] = useState(false);
+  const [keyCounter, setKeyCounter] = useState(0);
+
+  // Generate a unique key whenever the modal opens with a new image
+  useEffect(() => {
+    if (isOpen && imageUrl) {
+      setKeyCounter((prev) => prev + 1);
+    }
+  }, [isOpen, imageUrl]);
+
+  // Ensure the modal DOM is fully mounted before rendering content
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure DOM is ready before mounting content
+      const timer = setTimeout(() => {
+        setIsModalMounted(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      // Exit the compare mode first to avoid ReactCompareSlider DOM issues
+      setCompareMode(false);
+
+      // Then unmount the modal with a delay
+      const timer = setTimeout(() => {
+        setIsModalMounted(false);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   // Zoom in and out functions
   const zoomIn = () => setScale((prev) => Math.min(prev + 0.1, 3));
@@ -90,21 +135,109 @@ function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
     setError(true);
   };
 
-  // Reset state when modal opens
+  // Reset state when modal opens or closes
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
       setError(false);
       setScale(0.8);
       setCompareMode(false);
+    } else {
+      // Cleanup when modal closes
+      const cleanup = () => {
+        // Reset all state
+        setIsLoading(false);
+        setError(false);
+        setScale(0.8);
+        setCompareMode(false);
+        setIsModalMounted(false);
+      };
+
+      // Small delay before cleanup to ensure proper unmounting
+      const timer = setTimeout(cleanup, 100);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
+  // Additional cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Final cleanup when component unmounts
+      setIsModalMounted(false);
+    };
+  }, []);
+
+  // Handle escape key to close modal
+  useKeyPress("Escape", () => {
+    if (isOpen) {
+      onClose();
+    }
+  });
+
+  // Safety check - if not open or no image URL, don't render
   if (!isOpen || !imageUrl) return null;
+
+  // Modal container without content
+  if (!isModalMounted) {
+    return (
+      <div
+        className="fullscreen-modal"
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          backdropFilter: "blur(15px)",
+          WebkitBackdropFilter: "blur(15px)",
+        }}
+      >
+        <div className="fullscreen-header">
+          <button
+            onClick={onClose}
+            className="close-button"
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+              border: "none",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
+              transition: "all 0.2s ease",
+            }}
+          >
+            <RiCloseLine size={24} color="#333" />
+          </button>
+        </div>
+        {/* Loading indicator while waiting for content to mount */}
+        <div
+          className="spinner"
+          style={{
+            width: "50px",
+            height: "50px",
+            border: "4px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: "50%",
+            borderTop: "4px solid rgba(255, 255, 255, 0.8)",
+            animation: "spin 1s linear infinite",
+          }}
+        ></div>
+      </div>
+    );
+  }
 
   return (
     <div
       className="fullscreen-modal"
+      key={`modal-${keyCounter}`}
       style={{
         position: "fixed",
         top: 0,
@@ -342,11 +475,12 @@ function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
             transition: "transform 0.3s ease",
           }}
         >
-          {!error && compareMode && sourceImageUrl ? (
+          {!error && compareMode && sourceImageUrl && imageUrl ? (
             <div
               style={{ position: "relative", width: "100%", height: "90vh" }}
             >
               <ReactCompareSlider
+                key={`compare-${imageUrl}-${sourceImageUrl}`}
                 style={{
                   maxWidth: "100%",
                   maxHeight: "90vh",
@@ -357,6 +491,7 @@ function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
                 }}
                 itemOne={
                   <ReactCompareSliderImage
+                    key={`compare-img-src-${sourceImageUrl}`}
                     src={sourceImageUrl}
                     alt="Orijinal görüntü"
                     style={{
@@ -367,10 +502,15 @@ function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
                     crossOrigin="anonymous"
                     referrerPolicy="no-referrer"
                     onLoad={() => setIsLoading(false)}
+                    onError={() => {
+                      setError(true);
+                      setCompareMode(false);
+                    }}
                   />
                 }
                 itemTwo={
                   <ReactCompareSliderImage
+                    key={`compare-img-dest-${imageUrl}`}
                     src={imageUrl}
                     alt="İşlenmiş görüntü"
                     style={{
@@ -381,6 +521,10 @@ function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
                     crossOrigin="anonymous"
                     referrerPolicy="no-referrer"
                     onLoad={() => setIsLoading(false)}
+                    onError={() => {
+                      setError(true);
+                      setCompareMode(false);
+                    }}
                   />
                 }
                 handle={
@@ -396,6 +540,10 @@ function FullscreenImageModal({ isOpen, onClose, imageUrl, sourceImageUrl }) {
                 }
                 position={50}
                 portrait={false}
+                onPositionChange={() => {
+                  // Force repaint to prevent React DOM issues
+                  window.requestAnimationFrame(() => {});
+                }}
               />
               {/* Before label */}
               <div

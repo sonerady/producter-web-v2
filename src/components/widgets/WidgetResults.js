@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   RiFullscreenLine,
   RiDownloadLine,
@@ -29,13 +29,48 @@ function WidgetResults({
   const [imageErrors, setImageErrors] = useState({});
   const [hoveredImageIndex, setHoveredImageIndex] = useState(null);
   const [processingTime, setProcessingTime] = useState(0);
+  const prevResultImagesRef = useRef(null);
+
+  // Log when resultImages changes significantly
+  useEffect(() => {
+    // Only log when something meaningful changes (length or loading state)
+    if (!resultImages || !prevResultImagesRef.current) {
+      prevResultImagesRef.current = resultImages;
+      return;
+    }
+
+    const prevLength = prevResultImagesRef.current?.length || 0;
+    const currentLength = resultImages?.length || 0;
+
+    if (prevLength !== currentLength) {
+      console.log(
+        "WidgetResults - resultImages length changed:",
+        `${prevLength} -> ${currentLength}`
+      );
+    }
+
+    // Check if loading state changed
+    const prevHasLoading = prevResultImagesRef.current?.some(
+      (img) => img?.loading
+    );
+    const currentHasLoading = resultImages?.some((img) => img?.loading);
+
+    if (prevHasLoading !== currentHasLoading) {
+      console.log(
+        "WidgetResults - loading state changed:",
+        `${prevHasLoading} -> ${currentHasLoading}`
+      );
+    }
+
+    prevResultImagesRef.current = resultImages;
+  }, [resultImages]);
 
   // Süre sayacı için timer
   useEffect(() => {
     let timer;
     if (
       isGenerating ||
-      (resultImages && resultImages.some((img) => img.loading))
+      (resultImages && resultImages.some((img) => img?.loading))
     ) {
       // İşlem başladığında süre sayacını başlat
       timer = setInterval(() => {
@@ -51,6 +86,24 @@ function WidgetResults({
     };
   }, [isGenerating, resultImages]);
 
+  // Add safety measures to handle race conditions
+  useEffect(() => {
+    // Clean up fullscreen modal if resultImages changes
+    if (fullscreenImage && (!resultImages || resultImages.length === 0)) {
+      // If we have a fullscreen image open but resultImages is removed/empty, close it
+      setFullscreenImage(null);
+    } else if (fullscreenImage && resultImages && resultImages.length > 0) {
+      // Check if the fullscreen image URL is still in the resultImages
+      const urlStillExists = resultImages.some(
+        (img) => img?.url === fullscreenImage
+      );
+      if (!urlStillExists) {
+        // If the URL no longer exists, close the fullscreen modal
+        setFullscreenImage(null);
+      }
+    }
+  }, [resultImages, fullscreenImage]);
+
   // Süre formatı (1s, 2s, 3s)
   const formatTime = (seconds) => {
     return `${seconds}s`;
@@ -61,15 +114,32 @@ function WidgetResults({
     if (resultImages && resultImages.length > 0) {
       console.log("WidgetResults - sonuçlar:", resultImages);
       resultImages.forEach((img, idx) => {
-        console.log(`Görüntü ${idx + 1} URL:`, img.url);
+        if (img && img.url) {
+          console.log(`Görüntü ${idx + 1} URL:`, img.url);
+        } else {
+          console.warn(`Görüntü ${idx + 1} geçersiz veya eksik URL:`, img);
+        }
       });
     }
   }, [resultImages]);
 
   // Tam ekran modalı açma fonksiyonu
   const handleOpenFullscreen = (imageUrl) => {
-    console.log("Tam ekran açılıyor:", imageUrl);
-    setFullscreenImage(imageUrl);
+    // Önce önceki modalı temizle (varsa)
+    setFullscreenImage(null);
+
+    // Kısa bir gecikmeyle yeni modalı aç (DOM güncellemesi için zaman tanı)
+    setTimeout(() => {
+      console.log("Tam ekran açılıyor:", imageUrl);
+      setFullscreenImage(imageUrl);
+    }, 50);
+  };
+
+  // Modal kapatma fonksiyonu - güvenli kapatma
+  const handleCloseFullscreen = () => {
+    console.log("Tam ekran kapatılıyor");
+    // First set to null to trigger cleanup
+    setFullscreenImage(null);
   };
 
   // Dosya indirme fonksiyonu
@@ -291,142 +361,215 @@ function WidgetResults({
               alignItems: "flex-start",
             }}
           >
-            {resultImages.map((result, index) => (
-              <div
-                key={index}
-                className={`result-item ${
-                  selectedIndex === index ? "selected" : ""
-                }`}
-                onClick={() => !result.loading && onSelectResult(index)}
-                onMouseEnter={() => setHoveredImageIndex(index)}
-                onMouseLeave={() => setHoveredImageIndex(null)}
-                style={{
-                  border:
-                    selectedIndex === index && !result.loading
-                      ? "2px solid #0070F3"
-                      : "1px solid #ddd",
-                  position: "relative",
-                  overflow: "hidden",
-                  borderRadius: "8px",
-                  cursor: result.loading ? "default" : "pointer",
-                  aspectRatio: "1 / 1",
-                  backgroundColor: "#ffffff",
-                  width: "100%",
-                  boxShadow:
-                    selectedIndex === index && !result.loading
-                      ? "0 0 10px rgba(0, 112, 243, 0.3)"
-                      : "0 2px 8px rgba(0,0,0,0.05)",
-                }}
-              >
-                {result.loading ? (
-                  // Yükleniyor durumu - Basit beyaz arka plan
+            {resultImages.map((result, index) => {
+              // Safety check for null/undefined results
+              if (!result) {
+                console.warn(`Null or undefined result at index ${index}`);
+                return (
                   <div
-                    className="loading-spinner"
+                    key={`empty-${index}`}
+                    className="result-item placeholder"
                     style={{
                       position: "relative",
-                      width: "100%",
-                      height: "100%",
+                      aspectRatio: "1/1",
+                      borderRadius: "8px",
+                      backgroundColor: "#f0f0f0",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor: "#ffffff",
-                      borderRadius: "8px",
+                      border: "1px dashed #ddd",
                     }}
                   >
-                    <div className="spinner"></div>
-                    <span className="processing-time">
-                      {formatTime(processingTime)}
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    <img
-                      src={result.url}
-                      alt={`Rötuşlanan görsel ${index + 1}`}
-                      className="result-image"
-                      onError={(e) => handleImageError(e, index)}
-                      onLoad={() => handleImageLoad(index)}
+                    <div
                       style={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#bababa",
+                      }}
+                    >
+                      <RiImageLine size={32} />
+                      <span style={{ fontSize: "12px", marginTop: "5px" }}>
+                        Yüklenemedi
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Generate a stable key for the result items
+              const stableKey = result.url
+                ? `result-${index}-${result.url.slice(-20)}`
+                : `result-${index}`;
+
+              return (
+                <div
+                  key={stableKey}
+                  className={`result-item ${
+                    selectedIndex === index ? "selected" : ""
+                  }`}
+                  onClick={() => !result.loading && onSelectResult(index)}
+                  onMouseEnter={() => setHoveredImageIndex(index)}
+                  onMouseLeave={() => setHoveredImageIndex(null)}
+                  style={{
+                    border:
+                      selectedIndex === index && !result.loading
+                        ? "2px solid #0070F3"
+                        : "1px solid #ddd",
+                    position: "relative",
+                    overflow: "hidden",
+                    borderRadius: "8px",
+                    cursor: result.loading ? "default" : "pointer",
+                    aspectRatio: "1 / 1",
+                    backgroundColor: "#ffffff",
+                    width: "100%",
+                    boxShadow:
+                      selectedIndex === index && !result.loading
+                        ? "0 0 10px rgba(0, 112, 243, 0.3)"
+                        : "0 2px 8px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  {result.loading ? (
+                    // Yükleniyor durumu - Basit beyaz arka plan
+                    <div
+                      className="loading-spinner"
+                      style={{
+                        position: "relative",
                         width: "100%",
                         height: "100%",
-                        objectFit: "cover",
-                        transition: "all 0.3s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "8px",
                       }}
-                    />
-
-                    {imageErrors[index] && (
-                      <div style={imageErrorOverlayStyle}>
-                        <div>Yüklenirken hata oluştu</div>
-                        <div style={{ fontSize: "0.8em", marginTop: "5px" }}>
-                          Demo görüntü gösteriliyor
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="result-actions">
-                      <button
-                        className="action-icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenFullscreen(result.url);
-                        }}
-                        title="Tam Ekran"
-                      >
-                        <RiFullscreenLine />
-                      </button>
-                      <button
-                        className="action-icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadImage(result.url);
-                        }}
-                        title="İndir"
-                      >
-                        <RiDownloadLine />
-                      </button>
-                      <button
-                        className="action-icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditPrompt(index, result.description || "");
-                        }}
-                        title="Açıklamayı Düzenle"
-                      >
-                        <RiPencilLine />
-                      </button>
-                      <button
-                        className="action-icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEnhanceImage(result.url, index);
-                        }}
-                        title="Geliştir"
-                        style={{
-                          backgroundColor: "#8A2BE2",
-                          color: "white",
-                        }}
-                      >
-                        <RiSparklingLine color="white" />
-                      </button>
-                      <button
-                        className="action-icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveBackground(result.url, index);
-                        }}
-                        title="Arkaplanı Sil"
-                        style={{
-                          backgroundColor: "#8ADB53",
-                          color: "white",
-                        }}
-                      >
-                        <RiEraserLine color="white" />
-                      </button>
+                    >
+                      <div className="spinner"></div>
+                      <span className="processing-time">
+                        {formatTime(processingTime)}
+                      </span>
                     </div>
-                  </>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <>
+                      {result && result.url ? (
+                        <img
+                          key={`img-${result.url.slice(-20)}`}
+                          src={result.url}
+                          alt={`Rötuşlanan görsel ${index + 1}`}
+                          className="result-image"
+                          onError={(e) => handleImageError(e, index)}
+                          onLoad={() => handleImageLoad(index)}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            transition: "all 0.3s ease",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: "#f0f0f0",
+                          }}
+                        >
+                          <RiImageLine size={32} color="#bababa" />
+                        </div>
+                      )}
+
+                      {imageErrors[index] && (
+                        <div style={imageErrorOverlayStyle}>
+                          <div>Yüklenirken hata oluştu</div>
+                          <div style={{ fontSize: "0.8em", marginTop: "5px" }}>
+                            Demo görüntü gösteriliyor
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="result-actions">
+                        <button
+                          className="action-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (result && result.url) {
+                              handleOpenFullscreen(result.url);
+                            }
+                          }}
+                          title="Tam Ekran"
+                        >
+                          <RiFullscreenLine />
+                        </button>
+                        <button
+                          className="action-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (result && result.url) {
+                              downloadImage(result.url);
+                            }
+                          }}
+                          title="İndir"
+                        >
+                          <RiDownloadLine />
+                        </button>
+                        <button
+                          className="action-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (result) {
+                              onEditPrompt(index, result.description || "");
+                            }
+                          }}
+                          title="Açıklamayı Düzenle"
+                        >
+                          <RiPencilLine />
+                        </button>
+                        <button
+                          className="action-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (result && result.url) {
+                              onEnhanceImage(result.url, index);
+                            }
+                          }}
+                          title="Geliştir"
+                          style={{
+                            backgroundColor: "#8A2BE2",
+                            color: "white",
+                          }}
+                        >
+                          <RiSparklingLine color="white" />
+                        </button>
+                        <button
+                          className="action-icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (result && result.url) {
+                              onRemoveBackground(result.url, index);
+                            }
+                          }}
+                          title="Arkaplanı Sil"
+                          style={{
+                            backgroundColor: "#8ADB53",
+                            color: "white",
+                          }}
+                        >
+                          <RiEraserLine color="white" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : isGenerating ? (
@@ -528,8 +671,11 @@ function WidgetResults({
 
       {/* Tam ekran modal */}
       <FullscreenImageModal
+        key={
+          fullscreenImage ? `modal-${fullscreenImage.slice(-20)}` : "no-modal"
+        }
         isOpen={!!fullscreenImage}
-        onClose={() => setFullscreenImage(null)}
+        onClose={handleCloseFullscreen}
         imageUrl={fullscreenImage}
         sourceImageUrl={previewUrl}
       />
